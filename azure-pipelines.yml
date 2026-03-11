@@ -52,3 +52,31 @@ stages:
               PathtoPublish: '$(Build.ArtifactStagingDirectory)/app'
               ArtifactName: 'drop'
               publishLocation: 'Container'
+
+ - stage: Deploy
+   displayName: 'Disploy to web app'
+   dependsOn: Build
+   condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/dev'))
+   jobs:
+     - deployment: Deploywebapp
+       displayName: 'Deploy productcataloge'
+       environment: dev
+       strategy:
+        runOnce:
+          deploy:
+            steps:
+              
+            - task: DownloadBuildArtifacts@1
+              inputs:
+               buildType: 'current'
+               downloadType: 'single'
+               artifactName: 'drop'
+               downloadPath: '$(System.ArtifactsDirectory)'
+            
+            - task: AzureWebApp@1
+              inputs:
+                azureSubscription: 'Azure subscription 1(d7b7b790-dad8-4cbb-bc81-f19c99e4569a)'
+                appType: 'webApp'
+                appName: 'product-api-app'
+                package: '$(System.ArtifactsDirectory)/app/**/*.zip'
+                deploymentMethod: 'auto'
