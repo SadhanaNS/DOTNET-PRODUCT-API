@@ -75,7 +75,7 @@ stages:
 
  - stage: Deploy
    displayName: 'Disploy to web app'
-   dependsOn: Build
+   dependsOn: sonartest
    condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/dev'))
    jobs:
      - deployment: Deploywebapp
