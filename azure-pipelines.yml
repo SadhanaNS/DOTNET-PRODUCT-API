@@ -42,8 +42,7 @@ stages:
               command: 'publish'
               publishWebProjects: true
               arguments: >
-               --configuration $(buildConfiguration)                 
-               --no-build                 
+               --configuration $(buildConfiguration)                                
                --output $(Build.ArtifactStagingDirectory)/app              
               zipAfterPublish: true
 
