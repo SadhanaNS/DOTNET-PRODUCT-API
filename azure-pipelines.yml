@@ -78,5 +78,5 @@ stages:
                 azureSubscription: 'Azure subscription 1(d7b7b790-dad8-4cbb-bc81-f19c99e4569a)'
                 appType: 'webApp'
                 appName: 'product-api-app'
-                package: '$(System.ArtifactsDirectory)/app/**/*.zip'
+                package: '$(System.ArtifactsDirectory)/**/*.zip'
                 deploymentMethod: 'auto'
