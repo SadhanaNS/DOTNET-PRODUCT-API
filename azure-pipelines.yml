@@ -15,67 +15,63 @@ variables:
  projectPath: '**/*.csproj'
 
 stages: 
- - stage: Build
+ - stage: BuildandSAST
+   displayName: 'Build and SAST Scan'
    jobs:
      - job: build
        steps:
           - task: DotNetCoreCLI@2
             displayName: 'intalling dependencies'
             inputs:
-              azureSubscription: 'Azure subscription 1(d7b7b790-dad8-4cbb-bc81-f19c99e4569a)'
               command: 'restore'
               projects: '$(projectPath)'
               feedsToUse: 'select'
 
- - stage: sonartest
-   displayName: 'Sonarqube scan'
-   jobs:
-     - job: sonartest
-       steps:
+          - task: SonarCloudPrepare@4
+            inputs:
+                    SonarCloud: 'sonarsvc'
+                    organization: 'sadhanavs2025'
+                    scannerMode: 'dotnet'
+                    projectKey: 'sadhanavs2025_Product-api-app-dotnet'
+                    projectName: 'Product-api-app-dotnet'
+                  
+          - task: DotNetCoreCLI@2
+            displayName: 'build web app'
+            inputs:
+              command: 'build'
+              projects: '$(projectPath)'
+              arguments: '--configuration $(buildConfiguration) --no-restore'
 
-        - task: SonarQubePrepare@8
-          inputs:
-            SonarQube: 'sonarsvc'
-            scannerMode: 'dotnet'
-            projectKey: 'sadhanavs2025_Product-api-app-dotnet'
-            projectName: 'Product-api-app-dotnet'
-          
-        - task: DotNetCoreCLI@2
-          displayName: 'build web app'
-          inputs:
-                azureSubscription: 'Azure subscription 1(d7b7b790-dad8-4cbb-bc81-f19c99e4569a)'
-                command: 'build'
-                projects: '$(projectPath)'
+          - task: SonarCloudAnalyze@4
+            displayName: 'SonarCloud - Analyze'
 
-        - task: SonarQubeAnalyze@8
-          inputs:
-            jdkversion: 'JAVA_HOME_17_X64'
-
-        - task: SonarQubePublish@8
-          inputs:
-            pollingTimeoutSec: '300'
-            
-        - task: DotNetCoreCLI@2
-          displayName: 'publish web app'
-          inputs:
-              azureSubscription: 'Azure subscription 1(d7b7b790-dad8-4cbb-bc81-f19c99e4569a)'
+          - task: SonarCloudPublish@4
+            displayName: 'SonarCloud - Quality Gate'
+            inputs:
+              pollingTimeoutSec: '300'        
+          - task: DotNetCoreCLI@2
+            displayName: 'publish web app'
+            inputs:
               command: 'publish'
               publishWebProjects: true
               arguments: >
-               --configuration $(buildConfiguration)                                
-               --output $(Build.ArtifactStagingDirectory)/app              
-              zipAfterPublish: true
+               --configuration $(buildConfiguration)                                                       
+               --output $(Build.ArtifactStagingDirectory)/app
+               --no-build
+               zipAfterPublish: true
+              
 
-        - task: PublishBuildArtifacts@1
-          displayName: 'upload build artifact'
-          inputs:
-              PathtoPublish: '$(Build.ArtifactStagingDirectory)/app'
-              ArtifactName: 'drop'
-              publishLocation: 'Container'
+
+          - task: PublishBuildArtifacts@1
+            displayName: 'upload build artifact'
+            inputs:
+                      PathtoPublish: '$(Build.ArtifactStagingDirectory)/app'
+                      ArtifactName: 'drop'
+                      publishLocation: 'Container'
 
  - stage: Deploy
-   displayName: 'Disploy to web app'
-   dependsOn: sonartest
+   displayName: 'Deploy to web app'
+   dependsOn: BuildandSAST
    condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/dev'))
    jobs:
      - deployment: Deploywebapp
