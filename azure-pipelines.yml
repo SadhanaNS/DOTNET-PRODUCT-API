@@ -1,28 +1,27 @@
-# Starter pipeline
-# Start with a minimal pipeline that you can customize to build and deploy your code.
-# Add steps that build, run tests, deploy, and more:
-# https://aka.ms/yaml
-
 trigger:
-- dev
-- main
+  - dev
+  - main
 
 pool:
   vmImage: ubuntu-latest
 
 variables:
- buildConfiguration: 'Release'
- dotnetVersion: '8.0.x'
- projectPath: '**/*.csproj'
+  buildConfiguration: 'Release'
+  dotnetVersion: '8.0.x'
+  projectPath: '**/*.csproj'
 
-stages: 
- - stage: BuildandSAST
-   displayName: 'Build and SAST Scan'
-   jobs:
-     - job: build
-       steps:
+stages:
+  - stage: BuildandSAST
+    displayName: 'Build and SAST Scan'
+    jobs:
+      - job: build
+        steps:
+          - checkout: self
+            fetchDepth: 0
+            fetchTags: true
+
           - task: DotNetCoreCLI@2
-            displayName: 'intalling dependencies'
+            displayName: 'Installing dependencies'
             inputs:
               command: 'restore'
               projects: '$(projectPath)'
@@ -30,14 +29,14 @@ stages:
 
           - task: SonarCloudPrepare@4
             inputs:
-                    SonarCloud: 'sonarsvc'
-                    organization: 'sadhanavs2025'
-                    scannerMode: 'dotnet'
-                    projectKey: 'sadhanavs2025_Product-api-app-dotnet'
-                    projectName: 'Product-api-app-dotnet'
-                  
+              SonarCloud: 'sonarsvc'
+              organization: 'sadhanavs2025'
+              scannerMode: 'dotnet'
+              projectKey: 'sadhanavs2025_Product-api-app-dotnet'
+              projectName: 'Product-api-app-dotnet'
+
           - task: DotNetCoreCLI@2
-            displayName: 'build web app'
+            displayName: 'Build web app'
             inputs:
               command: 'build'
               projects: '$(projectPath)'
@@ -49,51 +48,46 @@ stages:
           - task: SonarCloudPublish@4
             displayName: 'SonarCloud - Quality Gate'
             inputs:
-              pollingTimeoutSec: '300'        
+              pollingTimeoutSec: '300'
+
           - task: DotNetCoreCLI@2
-            displayName: 'publish web app'
+            displayName: 'Publish web app'
             inputs:
               command: 'publish'
               publishWebProjects: true
-              arguments: >
-               --configuration $(buildConfiguration)                                                       
-               --output $(Build.ArtifactStagingDirectory)/app
-               --no-build
-               zipAfterPublish: true
-              
-
+              arguments: '--configuration $(buildConfiguration) --output $(Build.ArtifactStagingDirectory)/app --no-build'
+              zipAfterPublish: true
 
           - task: PublishBuildArtifacts@1
-            displayName: 'upload build artifact'
+            displayName: 'Upload build artifact'
             inputs:
-                      PathtoPublish: '$(Build.ArtifactStagingDirectory)/app'
-                      ArtifactName: 'drop'
-                      publishLocation: 'Container'
+              PathtoPublish: '$(Build.ArtifactStagingDirectory)/app'
+              ArtifactName: 'drop'
+              publishLocation: 'Container'
 
- - stage: Deploy
-   displayName: 'Deploy to web app'
-   dependsOn: BuildandSAST
-   condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/dev'))
-   jobs:
-     - deployment: Deploywebapp
-       displayName: 'Deploy productcataloge'
-       environment: dev
-       strategy:
-        runOnce:
-          deploy:
-            steps:
-              
-            - task: DownloadBuildArtifacts@1
-              inputs:
-               buildType: 'current'
-               downloadType: 'single'
-               artifactName: 'drop'
-               downloadPath: '$(System.ArtifactsDirectory)'
-            
-            - task: AzureWebApp@1
-              inputs:
-                azureSubscription: 'Azure subscription 1(d7b7b790-dad8-4cbb-bc81-f19c99e4569a)'
-                appType: 'webApp'
-                appName: 'product-api-app'
-                package: '$(System.ArtifactsDirectory)/**/*.zip'
-                deploymentMethod: 'auto'
+  - stage: Deploy
+    displayName: 'Deploy to web app'
+    dependsOn: BuildandSAST
+    condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/dev'))
+    jobs:
+      - deployment: Deploywebapp
+        displayName: 'Deploy productcataloge'
+        environment: dev
+        strategy:
+          runOnce:
+            deploy:
+              steps:
+                - task: DownloadBuildArtifacts@1
+                  inputs:
+                    buildType: 'current'
+                    downloadType: 'single'
+                    artifactName: 'drop'
+                    downloadPath: '$(System.ArtifactsDirectory)'
+
+                - task: AzureWebApp@1
+                  inputs:
+                    azureSubscription: 'Azure subscription 1(d7b7b790-dad8-4cbb-bc81-f19c99e4569a)'
+                    appType: 'webApp'
+                    appName: 'product-api-app'
+                    package: '$(System.ArtifactsDirectory)/**/*.zip'
+                    deploymentMethod: 'auto'
