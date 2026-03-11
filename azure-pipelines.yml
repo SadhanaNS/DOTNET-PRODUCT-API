@@ -1,0 +1,55 @@
+# Starter pipeline
+# Start with a minimal pipeline that you can customize to build and deploy your code.
+# Add steps that build, run tests, deploy, and more:
+# https://aka.ms/yaml
+
+trigger:
+- dev
+
+pool:
+  vmImage: ubuntu-latest
+
+variables:
+ buildConfiguration: 'Release'
+ dotnetVersion: '8.0.x'
+ projectPath: '**/*.csproj'
+
+stages: 
+ - stage: Build
+   jobs:
+     - job: build
+       steps:
+          - task: DotNetCoreCLI@2
+            displayName: 'intalling dependencies'
+            inputs:
+              azureSubscription: 'Azure subscription 1(d7b7b790-dad8-4cbb-bc81-f19c99e4569a)'
+              command: 'restore'
+              projects: '$(projectPath)'
+              feedsToUse: 'select'
+
+          
+          - task: DotNetCoreCLI@2
+            displayName: 'build web app'
+            inputs:
+                azureSubscription: 'Azure subscription 1(d7b7b790-dad8-4cbb-bc81-f19c99e4569a)'
+                command: 'build'
+                projects: '$(projectPath)'
+
+          - task: DotNetCoreCLI@2
+            displayName: 'publish web app'
+            inputs:
+              azureSubscription: 'Azure subscription 1(d7b7b790-dad8-4cbb-bc81-f19c99e4569a)'
+              command: 'publish'
+              publishWebProjects: true
+              arguments: >
+               --configuration $(buildConfiguration)                 
+               --no-build                 
+               --output $(Build.ArtifactStagingDirectory)/app              
+              zipAfterPublish: true
+
+          - task: PublishBuildArtifacts@1
+            displayName: 'upload build artifact'
+            inputs:
+              PathtoPublish: '$(Build.ArtifactStagingDirectory)/app'
+              ArtifactName: 'drop'
+              publishLocation: 'Container'
