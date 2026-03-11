@@ -27,17 +27,37 @@ stages:
               projects: '$(projectPath)'
               feedsToUse: 'select'
 
+ - stage: sonartest
+   displayName: 'Sonarqube scan'
+   jobs:
+     - job: sonartest
+       steps:
+
+        - task: SonarQubePrepare@8
+          inputs:
+            SonarQube: 'sonarsvc'
+            scannerMode: 'dotnet'
+            projectKey: 'sadhanavs2025_Product-api-app-dotnet'
+            projectName: 'Product-api-app-dotnet'
           
-          - task: DotNetCoreCLI@2
-            displayName: 'build web app'
-            inputs:
+        - task: DotNetCoreCLI@2
+          displayName: 'build web app'
+          inputs:
                 azureSubscription: 'Azure subscription 1(d7b7b790-dad8-4cbb-bc81-f19c99e4569a)'
                 command: 'build'
                 projects: '$(projectPath)'
 
-          - task: DotNetCoreCLI@2
-            displayName: 'publish web app'
-            inputs:
+        - task: SonarQubeAnalyze@8
+          inputs:
+            jdkversion: 'JAVA_HOME_17_X64'
+
+        - task: SonarQubePublish@8
+          inputs:
+            pollingTimeoutSec: '300'
+            
+        - task: DotNetCoreCLI@2
+          displayName: 'publish web app'
+          inputs:
               azureSubscription: 'Azure subscription 1(d7b7b790-dad8-4cbb-bc81-f19c99e4569a)'
               command: 'publish'
               publishWebProjects: true
@@ -46,9 +66,9 @@ stages:
                --output $(Build.ArtifactStagingDirectory)/app              
               zipAfterPublish: true
 
-          - task: PublishBuildArtifacts@1
-            displayName: 'upload build artifact'
-            inputs:
+        - task: PublishBuildArtifacts@1
+          displayName: 'upload build artifact'
+          inputs:
               PathtoPublish: '$(Build.ArtifactStagingDirectory)/app'
               ArtifactName: 'drop'
               publishLocation: 'Container'
